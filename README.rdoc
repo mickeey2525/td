@@ -80,6 +80,30 @@ customize it, please make a copy of this file and store it in the:
     ~/.td/java             folder on Mac OSX or Linux
     %USERPROFILE%\.td\java folder on Windows
 
+=== SSL Configuration
+
+The CLI supports custom SSL certificate configuration for environments with proxy servers or custom certificate authorities:
+
+* Command-line options:
+  * <tt>--insecure</tt>: Disable SSL certificate verification
+  * <tt>--ssl-ca-file PATH</tt>: Path to custom CA certificate file
+
+* Environment variables:
+  * <tt>TD_SSL_VERIFY</tt>: Set to 'false', 'no', or '0' to disable SSL certificate verification
+  * <tt>TD_SSL_CA_FILE</tt>: Path to custom CA certificate file
+
+* Configuration file (~/.td/td.conf):
+  * Add an [ssl] section with the following options:
+      [ssl]
+      verify = true|false
+      ca_file = /path/to/ca-bundle.crt
+
+The priority order for SSL settings is:
+1. Command-line options
+2. Environment variables
+3. Configuration file
+4. Default values (SSL verification enabled)
+
 == Testing Hooks
 
 The CLI implements several hooks to enable/disable/trigger special behaviors.

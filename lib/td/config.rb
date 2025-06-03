@@ -24,8 +24,19 @@ class Config
   @@import_endpoint = ENV['TREASURE_DATA_API_IMPORT_SERVER'] || ENV['TD_API_IMPORT_SERVER']
   @@import_endpoint = nil if @@endpoint == ""
   @@cl_import_endpoint = false # flag to indicate whether an endpoint has been provided through the command-line option
-  @@secure = true
+  @@secure = ENV['TD_SSL_VERIFY'].nil? ? true : parse_bool_env('TD_SSL_VERIFY')
+  @@cl_secure = false # flag to indicate whether secure option has been provided through the command-line
+  @@ssl_ca_file = ENV['TD_SSL_CA_FILE']
+  @@ssl_ca_file = nil if @@ssl_ca_file == ""
+  @@cl_ssl_ca_file = false # flag to indicate whether a CA file has been provided through the command-line option
   @@retry_post_requests = false
+
+  def self.parse_bool_env(name)
+    val = ENV[name].to_s.downcase
+    return true if ['true', 'yes', '1'].include?(val)
+    return false if ['false', 'no', '0'].include?(val)
+    true # default to true for SSL verification
+  end
 
   def initialize
     @path = nil
@@ -113,11 +124,53 @@ class Config
 
 
   def self.secure
+    # Priority: command-line > environment variable > config file > default
+    return @@secure if @@cl_secure
+    
+    # Check config file if environment variable is not set
+    if ENV['TD_SSL_VERIFY'].nil?
+      begin
+        ssl_section = Config.read['ssl.verify']
+        return parse_bool_config(ssl_section) unless ssl_section.nil?
+      rescue ConfigNotFoundError
+        # Ignore if config file not found
+      end
+    end
+    
     @@secure
   end
 
   def self.secure=(secure)
     @@secure = secure
+    @@cl_secure = true
+  end
+
+  def self.ssl_ca_file
+    # Priority: command-line > environment variable > config file > default
+    return @@ssl_ca_file if @@cl_ssl_ca_file
+    
+    # Check config file if environment variable is not set
+    if ENV['TD_SSL_CA_FILE'].nil?
+      begin
+        ssl_ca_file = Config.read['ssl.ca_file']
+        return ssl_ca_file unless ssl_ca_file.nil?
+      rescue ConfigNotFoundError
+        # Ignore if config file not found
+      end
+    end
+    
+    @@ssl_ca_file
+  end
+
+  def self.ssl_ca_file=(ssl_ca_file)
+    @@ssl_ca_file = ssl_ca_file
+    @@cl_ssl_ca_file = true
+  end
+
+  def self.parse_bool_config(value)
+    return true if ['true', 'yes', '1'].include?(value.to_s.downcase)
+    return false if ['false', 'no', '0'].include?(value.to_s.downcase)
+    true # default to true for SSL verification
   end
 
 
@@ -200,6 +253,8 @@ class Config
     string += "-k #{@@apikey} " if @@cl_apikey
     string += "-e #{@@endpoint} " if @@cl_endpoint
     string += "--import-endpoint #{@@import_endpoint} " if @@cl_import_endpoint
+    string += "--insecure " if @@cl_secure && !@@secure
+    string += "--ssl-ca-file #{@@ssl_ca_file} " if @@cl_ssl_ca_file && @@ssl_ca_file
     string
   end
 
