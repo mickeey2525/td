@@ -9,9 +9,10 @@ class Runner
     @import_endpoint = nil
     @prog_name = nil
     @insecure = false
+    @ssl_ca_file = nil
   end
 
-  attr_accessor :apikey, :endpoint, :import_endpoint, :config_path, :prog_name, :insecure
+  attr_accessor :apikey, :endpoint, :import_endpoint, :config_path, :prog_name, :insecure, :ssl_ca_file
 
   def run(argv=ARGV)
     require 'td/version'
@@ -78,6 +79,7 @@ EOF
     endpoint = @endpoint
     import_endpoint = @import_endpoint || @endpoint
     insecure = nil
+    ssl_ca_file = @ssl_ca_file
     $verbose = false
     #$debug = false
     retry_post_requests = false
@@ -108,12 +110,16 @@ EOF
       insecure = true
     }
 
+    op.on('--ssl-ca-file PATH', "Path to custom CA certificate file") {|s|
+      ssl_ca_file = s
+    }
+
     op.on('-v', '--verbose', "verbose mode", TrueClass) {|b|
       $verbose = b
     }
 
     #op.on('-d', '--debug', "debug mode", TrueClass) {|b|
-    #	$debug = b
+    #   $debug = b
     #}
 
     op.on('-h', '--help', "show help") {
@@ -156,6 +162,9 @@ EOF
       end
       if insecure
         Config.secure = false
+      end
+      if ssl_ca_file
+        Config.ssl_ca_file = ssl_ca_file
       end
       if retry_post_requests
         Config.retry_post_requests = true

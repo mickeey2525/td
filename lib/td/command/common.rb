@@ -40,6 +40,16 @@ module Command
     unless opts.has_key?(:retry_post_requests)
       opts[:retry_post_requests] = Config.retry_post_requests
     end
+    
+    # Handle SSL CA file option
+    if Config.ssl_ca_file
+      begin
+        validate_ssl_ca_file(Config.ssl_ca_file)
+        opts[:ssl_ca_file] = Config.ssl_ca_file
+      rescue ParameterConfigurationError => e
+        raise e
+      end
+    end
 
     # apikey is mandatory
     apikey = Config.apikey
@@ -65,6 +75,20 @@ module Command
     end
 
     Client.new(apikey, opts)
+  end
+  
+  def validate_ssl_ca_file(path)
+    return nil if path.nil?
+    
+    unless File.exist?(path)
+      raise ParameterConfigurationError, "SSL CA file not found: #{path}"
+    end
+    
+    unless File.readable?(path)
+      raise ParameterConfigurationError, "SSL CA file not readable: #{path}"
+    end
+    
+    path
   end
 
   def get_import_client
